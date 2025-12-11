@@ -18,3 +18,51 @@ var/
 wheels/
 *.egg
 MANIFEST
+
+# --- Virtual Environment ---
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- OS generated files ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# --- Docker --- (локальные настройки кэши и временные файлы)
+docker-compose.override.yml 
+
+# --- DataBase ---
+*.dump
+*.sqlite
+*.db
+
+# --- Logs ---
+*.log
+logs/
+
+# --- StreamLit ---
+.streamlit/secrets.toml #аналог енв для стримлит
+
+# --- Jupyter Notebook ---
+.ipynb_checkpoints
+
+# --- Testing ---
+.coverage
+htmlcov/
+.pytest_cache/
