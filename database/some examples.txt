@@ -1,0 +1,21 @@
+INSERT INTO analysis_requests (user_id, source, input_text, ai_response_raw, calories, protein, fat, carbs)
+SELECT
+    u.id,
+    'telegram',
+    'Завтрак: овсянка на воде, яблоко. Обед: куриная грудка, гречка, огурец',
+    '{"deficiencies": [{"name": "Витамин D", "severity": "низкий", "recommended_food": "жирная рыба, яйца"}, {"name": "Железо", "severity": "умеренный", "recommended_food": "печень, гранат, гречка"}]}',
+    450,
+    35.2
+    12.5
+    55.3
+FROM users u WHERE u.telegram_id = 123456789;
+
+INSERT INTO parsed_results (request_id, deficiency, severity, recommended_food)
+SELECT
+    ae.id,
+    'Витамин D',
+    'низкий',
+    'жирная рыба, яйца'
+FROM analysis_requests ar
+JOIN users u ON ar.user_id = u.id
+WHERE u.telegram_id = 123456789 AND ar.id =1;
