@@ -4,6 +4,6 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no cache-dir -r requirements.txt
 
-#сюда код
+COPY . .
 
 CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.adress=0.0.0.0"]
