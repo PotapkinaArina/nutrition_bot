@@ -1,99 +1,188 @@
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List, Optional
+from datetime import datetime
 import os
-import asyncio
-import logging
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-from aiogram.enums import ParseMode
-from aiogram.client.default import DefaultBotProperties
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Настройка логирования
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-
-# Проверяем, что токен загружен
-if not BOT_TOKEN:
-    logger.error("Токен бота не найден! Проверьте файл .env")
-    exit(1)  # Останавливаем программу, если токена нет
-
-# Инициализация бота
-bot = Bot(
-    token=BOT_TOKEN,
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-)
-dp = Dispatcher()
-
-# ==================== КЛАВИАТУРА С КНОПКОЙ ====================
-# Создаем клавиатуру с одной кнопкой "Старт"
-start_keyboard = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="🚀 Старт")]
-    ],
-    resize_keyboard=True,  # Автоматический размер кнопки
-    one_time_keyboard=False  # Клавиатура не исчезнет после нажатия
+app = FastAPI(
+    title="Nutrition Bot",
+    description="API для анализа питания и отслеживания нутриентов",
+    version="1.0.0"
 )
 
-# ==================== ФУНКЦИЯ ПРИВЕТСТВИЯ ====================
-def get_welcome_message() -> str:
-    """Возвращает приветственное сообщение для пользователя"""
-    return (
-        "👋 <b>Привет! Я бот для анализа питания.</b>\n\n"
-        "Я помогу понять, каких витаминов и микроэлементов "
-        "вам может не хватать на основе вашего рациона.\n\n"
-        "Просто <b>отправьте мне список продуктов</b>, которые вы съели за день, "
-        "или нажмите кнопку <b>🚀 Старт</b>, чтобы начать!\n\n"
-        "Например: <i>'яблоко, курица, гречка, салат из помидоров'</i>\n\n"
-        "📌 <i>В этом тестовом режиме я покажу только это сообщение. "
-        "Функция анализа скоро появится!</i>"
-    )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["htttp://localhost:8501","http://frontend:8501"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# ==================== ОБРАБОТЧИК КОМАНДЫ /START ====================
-@dp.message(Command("start"))
-async def cmd_start(message: types.Message):
-    """Обрабатывает команду /start"""
-    await message.answer(
-        text=get_welcome_message(),
-        reply_markup=start_keyboard
-    )
-    logger.info(f"Пользователь {message.from_user.id} использовал /start")
-
-# ==================== ОБРАБОТЧИК КНОПКИ "СТАРТ" ====================
-@dp.message(lambda message: message.text and "старт" in message.text.lower())
-async def handle_start_button(message: types.Message):
-    """Обрабатывает нажатие кнопки 'Старт' или текст 'старт'"""
-    await message.answer(
-        text=get_welcome_message(),
-        reply_markup=start_keyboard
-    )
-    logger.info(f"Пользователь {message.from_user.id} нажал кнопку Старт")
-
-# ==================== ЗАГЛУШКА ДЛЯ ЛЮБЫХ ДРУГИХ СООБЩЕНИЙ ====================
-@dp.message()
-async def handle_other_messages(message: types.Message):
-    """Заглушка для всех остальных сообщений"""
-    await message.answer(
-        "⏳ <b>Функция анализа питания в разработке!</b>\n\n"
-        "Сейчас я могу только показать приветствие. "
-        "Нажмите кнопку <b>🚀 Старт</b> или отправьте команду <code>/start</code>."
-    )
-    logger.info(f"Пользователь {message.from_user.id} отправил: {message.text[:50]}...")
-
-# ==================== ЗАПУСК БОТА ====================
-async def main():
-    """Основная функция запуска бота"""
-    logger.info("Запускаю бота...")
+class FoodItem(BaseModel):  #(Пидантик) модели данных.
+    name: str
+    quantity: Optional[str]= "1 portion" 
     
-    # Удаляем старые обновления, чтобы избежать ошибок
-    await bot.delete_webhook(drop_pending_updates=True)
+
+class AnalysisRequest(BaseModel):
+    text: str
+    user_id: Optional[int] = None
+    source: str = "web"
+
+class Deficiency(BaseModel):
+    name: str
+    severity: str
+    recommended_food: str
+
+class AnalysisResponse(BaseModel):
+    request_id: int
+    calories: int
+    protein: float
+    fat: float
+    carbs: float
+    deficiencies: List[Deficiency]
+    recommendations: str
+
+class UserCreate(BaseModel):
+    telegram_id: Optional[int] = None
+    username: Optional[str] = None
+    weight: Optional[float] = None
+    height: Optional[float] = None
+
+class Database:
+    @staticmethod
+    def save_request(user_id: int,text: str, source: str)->int:
+        return 1
+    @staticmethod
+    def save_analysis_result(request_id: int, alalysis_data: dict):
+        pass
+    @staticmethod
+    def get_user_history(user_id: int):
+        return [
+            {
+                "id": 1,
+                "date": "овсянка, яблоко, курица",
+                "calories": 450,
+                "protein": 35.2,
+                "fat": 12.5,
+                "carbs": 55.3
+            },
+            {
+                "id": 2,
+                "date": "2024-01-14",
+                "text": "гречка, говядина, салат",
+                "calories": 520,
+                "protein": 42.1,
+                "fat":18.3,
+                "carbs": 48.7
+            }
+        ]
+
+db = Database()
+
+def analyze_nutrition(text: str)->dict:
+    "" "заглукшка для анализа(тут должен был быть ЯндексДЖПТ)"""
+    text_lower = text.lower()
+
+    calories = 400
+    protein = 25.0
+    fat = 15.0
+    carbs = 50.0
+
+    deficiencies = []
+
+    if any(word in text_lower for word in ["молоко", "сыр", "творог", "йогурт"]):
+        deficiencies.append({
+            "name": "Vitanin D",
+            "severity": "низкий",
+            "recommended_food": "скумбрия, авокадо, солнечные ванны"
+        })
+
+     if any(word in text_lower for word in ["яблоко", "апельсин", "банан"]):
+        deficiencies.append({
+            "name": "Витамин C",
+            "severity": "умеренный",
+            "recommended_food": "цитрусовые, киви, болгарский перец"
+        }) 
+        if not any(word in text_lower for word in ["рыба", "лосось", "скумбрия", "тунец"]):
+        deficiencies.append({
+            "name": "Омега-3",
+            "severity": "высокий",
+            "recommended_food": "жирная рыба, грецкие орехи, льняное семя"
+        })
+    recommendations = "Ешьте больше овощей и цельнозерновых продуктов."
+
+    return {
+        "calories": calories,
+        "protein": protein,
+        "fat": fat,
+        "carbs": carbs;
+        "deficiencies": deficiencies,
+        "recommendations": recommendations
+    }
+
+@app.get("/")
+async def root():
+    return {
+        "message": "Nutrition Bot API",
+        "version": "1.0.0",
+        "endpoints": {
+            "analyze": "POST/analyze",
+            "history": "GET/history/{user_id}",
+            "health": "GET/health"
+        }
+    }
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+@app.post("/analyze", response_model=AnalysisResponse)
+async def analyse_food(request: AnalysisRequest):
+    """Анализ введённых продуктов"""
+    try:
+        request_id = db.save_request(request.user_id or 1, request.text, request.source)
+        analysis_result = analyze_nutrition(request.text)
+        db.save_analysis_result(request_id, analysis_result)
+
+        return AnalysisResponse(
+            request_id = request_id,
+            calories= analysis_result["calories"],
+            protein=analysis_result["protein"],
+            fat=analysis_result["fat"],
+            carbs=analysis_result["carbs"],
+            deficiencies=analysis_result["deficiencies"],
+            recommendations= analysis_result["recommendations"]
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
-    # Начинаем опрашивать Telegram на новые сообщения
-    await dp.start_polling(bot)
+@app.get("/history/{user_id}")
+async def get_history(user_id: int):
+    """Получение истории анализов пользователя"""
+    try:
+        history=db.get_user_history(user_id)
+        return{
+            "user_id": user_id,
+            "history": history,
+            "count": len(history)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/user")
+async def create_user(user: UserCreate):
+    """Создание/обновление пользователя"""
+    return {
+        "message": "User was created/updated successfully",
+        "user_id": 1,
+        "telegram_id": user.telegram_id,
+        "timestamp": datetime.now().isoformat()
+    }
 
 if __name__ == "__main__":
-    # Запускаем асинхронную функцию main()
-    asyncio.run(main())
+    import uvicorn
+    uvicorn.run(app, host= "0.0.0.0", port = 8000) 
