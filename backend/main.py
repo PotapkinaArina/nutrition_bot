@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -16,7 +16,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["htttp://localhost:8501","http://frontend:8501"],
+    allow_origins=["http://localhost:8501","http://frontend:8501"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -24,7 +24,7 @@ app.add_middleware(
 
 class FoodItem(BaseModel):  #(Пидантик) модели данных.
     name: str
-    quantity: Optional[str]= "1 portion" 
+    quantity: Optional[str] = "1 portion" 
     
 
 class AnalysisRequest(BaseModel):
@@ -54,17 +54,20 @@ class UserCreate(BaseModel):
 
 class Database:
     @staticmethod
-    def save_request(user_id: int,text: str, source: str)->int:
+    def save_request(user_id: int, text: str, source: str) -> int:
         return 1
+    
     @staticmethod
-    def save_analysis_result(request_id: int, alalysis_data: dict):
+    def save_analysis_result(request_id: int, analysis_data: dict):
         pass
+
     @staticmethod
     def get_user_history(user_id: int):
         return [
             {
                 "id": 1,
-                "date": "овсянка, яблоко, курица",
+                "date": "2024-01-15"
+                "text": "овсянка, яблоко, курица",
                 "calories": 450,
                 "protein": 35.2,
                 "fat": 12.5,
@@ -83,8 +86,8 @@ class Database:
 
 db = Database()
 
-def analyze_nutrition(text: str)->dict:
-    "" "заглукшка для анализа(тут должен был быть ЯндексДЖПТ)"""
+def analyze_nutrition(text: str) -> dict:
+    """заглукшка для анализа(тут должен был быть ЯндексДЖПТ)"""
     text_lower = text.lower()
 
     calories = 400
@@ -96,18 +99,19 @@ def analyze_nutrition(text: str)->dict:
 
     if any(word in text_lower for word in ["молоко", "сыр", "творог", "йогурт"]):
         deficiencies.append({
-            "name": "Vitanin D",
+            "name": "Кальций",
             "severity": "низкий",
             "recommended_food": "скумбрия, авокадо, солнечные ванны"
         })
 
-     if any(word in text_lower for word in ["яблоко", "апельсин", "банан"]):
+    if any(word in text_lower for word in ["яблоко", "апельсин", "банан"]):
         deficiencies.append({
             "name": "Витамин C",
             "severity": "умеренный",
             "recommended_food": "цитрусовые, киви, болгарский перец"
         }) 
-        if not any(word in text_lower for word in ["рыба", "лосось", "скумбрия", "тунец"]):
+
+    if not any(word in text_lower for word in ["рыба", "лосось", "скумбрия", "тунец"]):
         deficiencies.append({
             "name": "Омега-3",
             "severity": "высокий",
@@ -119,7 +123,7 @@ def analyze_nutrition(text: str)->dict:
         "calories": calories,
         "protein": protein,
         "fat": fat,
-        "carbs": carbs;
+        "carbs": carbs,
         "deficiencies": deficiencies,
         "recommendations": recommendations
     }
@@ -130,9 +134,9 @@ async def root():
         "message": "Nutrition Bot API",
         "version": "1.0.0",
         "endpoints": {
-            "analyze": "POST/analyze",
-            "history": "GET/history/{user_id}",
-            "health": "GET/health"
+            "analyze": "POST /analyze",
+            "history": "GET /history/{user_id}",
+            "health": "GET /health"
         }
     }
 
@@ -141,7 +145,7 @@ async def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 @app.post("/analyze", response_model=AnalysisResponse)
-async def analyse_food(request: AnalysisRequest):
+async def analyze_food(request: AnalysisRequest):
     """Анализ введённых продуктов"""
     try:
         request_id = db.save_request(request.user_id or 1, request.text, request.source)
@@ -149,8 +153,8 @@ async def analyse_food(request: AnalysisRequest):
         db.save_analysis_result(request_id, analysis_result)
 
         return AnalysisResponse(
-            request_id = request_id,
-            calories= analysis_result["calories"],
+            request_id=request_id,
+            calories=analysis_result["calories"],
             protein=analysis_result["protein"],
             fat=analysis_result["fat"],
             carbs=analysis_result["carbs"],
@@ -164,8 +168,8 @@ async def analyse_food(request: AnalysisRequest):
 async def get_history(user_id: int):
     """Получение истории анализов пользователя"""
     try:
-        history=db.get_user_history(user_id)
-        return{
+        history = db.get_user_history(user_id)
+        return {
             "user_id": user_id,
             "history": history,
             "count": len(history)
@@ -185,4 +189,4 @@ async def create_user(user: UserCreate):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host= "0.0.0.0", port = 8000) 
+    uvicorn.run(app, host="0.0.0.0", port=8000) 

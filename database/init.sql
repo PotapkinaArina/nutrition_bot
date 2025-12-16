@@ -78,5 +78,5 @@ CREATE TRIGGER update_users_updated_at
 INSERT INTO users (telegram_id, username,weight,height,age,gender)
 VALUES
     (123456789, 'test_user', 65.4, 168.9, 25, 'female'),
-    (987654321, 'demo_user', 70.5, 172.0, 20, 'male'),
+    (987654321, 'demo_user', 70.5, 172.0, 20, 'male')
 ON CONFLICT (telegram_id) DO NOTHING;
