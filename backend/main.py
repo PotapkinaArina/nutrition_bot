@@ -66,7 +66,7 @@ class Database:
         return [
             {
                 "id": 1,
-                "date": "2024-01-15"
+                "date": "2024-01-15",
                 "text": "овсянка, яблоко, курица",
                 "calories": 450,
                 "protein": 35.2,
