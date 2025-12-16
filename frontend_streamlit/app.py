@@ -3,7 +3,7 @@ import requests
 import json
 from datetime import datetime
 
-st.set_page_congig(
+st.set_page_config(
     page_title="Nutrition Bot",
     page_icon="🥗",
     layout="wide"
