@@ -29,6 +29,8 @@ with st.sidebar:
             st.success("BACKEND подключён ^^")
         else:
             st.error("Не доступен BACKEND :(")
+    except:
+        st.error("Не удалось подключиться к backend!")
     
 tab1, tab2 = st.tabs([ "📊 Анализ питания", "📈 История"])
 
@@ -96,7 +98,7 @@ with tab2:
                 if data['history']:
                     for item in data['history']:
                         with st.expander(f"📅 {item['date']}: {item['text'][:50]}..."):
-                        st.write(f"**Продукты:** {item['text']}")
+                            st.write(f"**Продукты:** {item['text']}")
                         col1, col2, col3, col4 = st.columns(4)
                         with col1:
                             st.metric("Калории", f"{data['calories']} ккал")
