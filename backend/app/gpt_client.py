@@ -1,22 +1,85 @@
 import requests
-from app.config import YANDEX_GPT_API_KEY, YANDEX_GPT_URL
+import json
+import re
+from app.config import YANDEX_API_KEY, YANDEX_FOLDER_ID, YANDEX_GPT_URL
 
-SYSTEM_PROMPT = (
-    "Ты — нутрициолог. Проанализируй рацион пользователя. "
-    "Верни СТРОГО JSON со следующими полями: "
-    "calories (int), proteins (int), fats (int), carbs (int), "
-    "deficiencies (string), recommendations (string). "
-    "Без текста вне JSON."
-)
+SYSTEM_PROMPT = """
+Ты — нутрициолог.
+Проанализируй описание еды.
+Верни ТОЛЬКО JSON строго в формате:
 
-def analyze_text(text: str) -> str:
-    return '{"calories":420,"proteins":18,"fats":12,"carbs":60,"deficiencies":"Недостаток клетчатки","recommendations":"Добавьте овощи и цельнозерновые продукты"}'
+{
+  "calories": number,
+  "proteins": number,
+  "fats": number,
+  "carbs": number,
+  "deficiencies": string,
+  "recommendations": string
+}
+"""
 
+HEADERS = {
+    "Authorization": f"Api-Key {YANDEX_API_KEY}",
+    "Content-Type": "application/json"
+}
 
+def parse_gpt_response(text: str) -> dict:
+    """
+    Преобразует текст GPT в словарь Python, игнорируя лишние символы.
+    """
+    try:
+        # Ищем первый {...} в ответе GPT
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if not match:
+            raise ValueError("❌ JSON не найден в ответе GPT")
+        json_text = match.group(0)
+        return json.loads(json_text)
+    except json.JSONDecodeError as e:
+        print("❌ Ошибка JSON:", e)
+        return {
+            "calories": None,
+            "proteins": None,
+            "fats": None,
+            "carbs": None,
+            "deficiencies": None,
+            "recommendations": None
+        }
 
-    resp = requests.post(YANDEX_GPT_URL, json=payload, headers=headers, timeout=30)
-    resp.raise_for_status()
+def analyze_text(user_text: str) -> dict:
+    """
+    Отправляет текст на YandexGPT и возвращает словарь с анализом питания.
+    """
+    payload = {
+        "modelUri": f"gpt://{YANDEX_FOLDER_ID}/yandexgpt/latest",
+        "completionOptions": {
+            "stream": False,
+            "temperature": 0.2,
+            "maxTokens": 500
+        },
+        "messages": [
+            {"role": "system", "text": SYSTEM_PROMPT},
+            {"role": "user", "text": user_text}
+        ]
+    }
 
-    # предполагаем, что текст ответа — JSON-строка
-    result_text = resp.json()["result"]["alternatives"][0]["message"]["text"]
-    return result_text
+    try:
+        response = requests.post(YANDEX_GPT_URL, headers=HEADERS, json=payload, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+
+        # Берём текст ответа GPT
+        raw_text = data["result"]["alternatives"][0]["message"]["text"]
+
+        # Преобразуем в словарь Python
+        return parse_gpt_response(raw_text)
+
+    except (requests.RequestException, KeyError, ValueError) as e:
+        print("❌ Ошибка при запросе к YandexGPT:", e)
+        return {
+            "calories": None,
+            "proteins": None,
+            "fats": None,
+            "carbs": None,
+            "deficiencies": None,
+            "recommendations": None
+        }
