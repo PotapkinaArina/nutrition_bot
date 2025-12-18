@@ -69,6 +69,7 @@ def analyze_text(user_text: str) -> dict:
 
         # Берём текст ответа GPT
         raw_text = data["result"]["alternatives"][0]["message"]["text"]
+        print("🧠 GPT RAW RESPONSE:\n", raw_text)
 
         # Преобразуем в словарь Python
         return parse_gpt_response(raw_text)

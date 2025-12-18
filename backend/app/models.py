@@ -13,7 +13,7 @@ class User(Base):
 
     analyses = relationship("AnalysisRequest", back_populates="user")
 
-class AnalysisRequest(Base):
+class AnalysisRequestModel(Base):
     __tablename__ = "analysis_requests"
 
     id = Column(Integer, primary_key=True, index=True)

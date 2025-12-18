@@ -1,15 +1,19 @@
 FROM python:3.9-slim
 
+# Рабочая директория
 WORKDIR /app
 
-# Копируем только зависимости — это ускоряет пересборку
+# Копируем только зависимости
 COPY requirements.txt .
-ENV PYTHONPATH=/app
 
-
+# Устанавливаем зависимости
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копируем остальной код
-COPY .. .
+# Копируем весь код из текущей папки (backend) внутрь контейнера
+COPY . .
 
+# Устанавливаем PYTHONPATH
+ENV PYTHONPATH=/app
+
+# Запуск приложения
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
