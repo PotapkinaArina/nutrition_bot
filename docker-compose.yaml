@@ -10,7 +10,7 @@ services:       # 1Сервис: База данных Постгрескл с �
             POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme} 
             POSTGRES_DB: ${DB_NAME:-nutrition_db}
         ports:      # ХОСТ: КОНТЕЙНЕР проброс портов.
-            - "5433:5432"
+            - "5432:5432"
         volumes: # монтируем диски-папки.
             - postgres_data:/var/lib/postgresql/data # для БД волюм.
             - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql #чтоб сразу инит.скл сделал.
@@ -29,8 +29,6 @@ services:       # 1Сервис: База данных Постгрескл с �
             dockerfile: Dockerfile  
         container_name: nutrition_backend
         restart: unless-stopped
-        ports:
-            - "8000:8000"
         environment:
             DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-changeme}@postgres:5432/${DB_NAME:-nutrition_db}
                     # протокол://пользователь:пароль@хост:порт/ьаза.
@@ -38,6 +36,8 @@ services:       # 1Сервис: База данных Постгрескл с �
         depends_on:     #зависимости.
             postgres:
                 condition: service_healthy #ждём, когда БД будет healthy.
+        ports:
+        - "8000:8000"
         networks:
             - app-network 
                 #монтировка кода(сразу применяются изменения)
