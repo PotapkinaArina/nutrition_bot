@@ -1,229 +1,44 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Optional
-from datetime import datetime
-import os
-from dotenv import load_dotenv
+from app.schemas import AnalyzeRequestSchema, AnalyzeResponseSchema
+from app.gpt_client import analyze_text
 
-load_dotenv()
+# from app.database import get_db
+# from app.models import AnalysisRequest, ParsedResult
+# from sqlalchemy.orm import Session
 
-app = FastAPI(
-    title="Nutrition Bot",
-    description="API для анализа питания и отслеживания нутриентов",
-    version="1.0.0"
-)
+app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:8501","http://frontend:8501"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-class FoodItem(BaseModel):  #(Пидантик) модели данных.
-    name: str
-    quantity: Optional[str] = "1 portion" 
-    
-
-class AnalysisRequest(BaseModel):
-    text: str
-    user_id: Optional[int] = None
-    source: str = "web"
-
-class Deficiency(BaseModel):
-    name: str
-    severity: str
-    recommended_food: str
-
-class AnalysisResponse(BaseModel):
-    request_id: int
-    calories: int
-    protein: float
-    fat: float
-    carbs: float
-    deficiencies: List[Deficiency]
-    recommendations: str
-
-class UserCreate(BaseModel):
-    telegram_id: Optional[int] = None
-    username: Optional[str] = None
-    weight: Optional[float] = None
-    height: Optional[float] = None
-
-class Database:
-    @staticmethod
-    def save_request(user_id: int, text: str, source: str) -> int:
-        return 1
-    
-    @staticmethod
-    def save_analysis_result(request_id: int, analysis_data: dict):
-        pass
-
-    @staticmethod
-    def get_user_history(user_id: int):
-        return [
-            {
-                "id": 1,
-                "date": "2024-01-15",
-                "text": "овсянка, яблоко, курица",
-                "calories": 450,
-                "protein": 35.2,
-                "fat": 12.5,
-                "carbs": 55.3
-            },
-            {
-                "id": 2,
-                "date": "2024-01-14",
-                "text": "гречка, говядина, салат",
-                "calories": 520,
-                "protein": 42.1,
-                "fat":18.3,
-                "carbs": 48.7
-            }
-        ]
-
-db = Database()
-
-def analyze_nutrition(text: str) -> dict:
-    """заглукшка для анализа(тут должен был быть ЯндексДЖПТ)"""
-    text_lower = text.lower()
-
-    calories = 400
-    protein = 25.0
-    fat = 15.0
-    carbs = 50.0
-
-    deficiencies = []
-
-    if any(word in text_lower for word in ["молоко", "сыр", "творог", "йогурт"]):
-        deficiencies.append({
-            "name": "Кальций",
-            "severity": "низкий",
-            "recommended_food": "скумбрия, авокадо, солнечные ванны"
-        })
-
-    if any(word in text_lower for word in ["яблоко", "апельсин", "банан"]):
-        deficiencies.append({
-            "name": "Витамин C",
-            "severity": "умеренный",
-            "recommended_food": "цитрусовые, киви, болгарский перец"
-        }) 
-
-    if not any(word in text_lower for word in ["рыба", "лосось", "скумбрия", "тунец"]):
-        deficiencies.append({
-            "name": "Омега-3",
-            "severity": "высокий",
-            "recommended_food": "жирная рыба, грецкие орехи, льняное семя"
-        })
-    recommendations = "Ешьте больше овощей и цельнозерновых продуктов."
-
-    return {
-        "calories": calories,
-        "protein": protein,
-        "fat": fat,
-        "carbs": carbs,
-        "deficiencies": deficiencies,
-        "recommendations": recommendations
-    }
-
-@app.get("/")
-async def root():
-    return {
-        "message": "Nutrition Bot API",
-        "version": "1.0.0",
-        "endpoints": {
-            "analyze": "POST /analyze",
-            "history": "GET /history/{user_id}",
-            "health": "GET /health"
-        }
-    }
-
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
-
-@app.post("/analyze", response_model=AnalysisResponse)
-async def analyze_food(request: AnalysisRequest):
-    """Анализ введённых продуктов"""
+@app.post("/analyze", response_model=AnalyzeResponseSchema)
+def analyze(request: AnalyzeRequestSchema):  # db: Session = Depends(get_db)
     try:
-        request_id = db.save_request(request.user_id or 1, request.text, request.source)
-        analysis_result = analyze_nutrition(request.text)
-        db.save_analysis_result(request_id, analysis_result)
+        # 1️⃣ Отправляем текст в GPT
+        result = analyze_text(request.text)
 
-        return AnalysisResponse(
-            request_id=request_id,
-            calories=analysis_result["calories"],
-            protein=analysis_result["protein"],
-            fat=analysis_result["fat"],
-            carbs=analysis_result["carbs"],
-            deficiencies=analysis_result["deficiencies"],
-            recommendations= analysis_result["recommendations"]
+        # 2️⃣ Временно закомментируем работу с БД
+        """
+        # Сохраняем исходный запрос
+        analysis_req = AnalysisRequest(user_id=request.user_id, text=request.text)
+        db.add(analysis_req)
+        db.commit()
+        db.refresh(analysis_req)
+
+        # Сохраняем распарсенный результат
+        parsed = ParsedResult(
+            analysis_request_id=analysis_req.id,
+            calories=result.get("calories"),
+            proteins=result.get("proteins"),
+            fats=result.get("fats"),
+            carbs=result.get("carbs"),
+            deficiencies=result.get("deficiencies"),
+            recommendations=result.get("recommendations")
         )
+        db.add(parsed)
+        db.commit()
+        """
+
+        # 3️⃣ Возвращаем результат пользователю
+        return result
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-@app.get("/history/{user_id}")
-async def get_history(user_id: int):
-    """Получение истории анализов пользователя"""
-    try:
-        history = db.get_user_history(user_id)
-        return {
-            "user_id": user_id,
-            "history": history,
-            "count": len(history)
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-@app.post("/user")
-async def create_user(user: UserCreate):
-    """Создание/обновление пользователя"""
-    return {
-        "message": "User was created/updated successfully",
-        "user_id": 1,
-        "telegram_id": user.telegram_id,
-        "timestamp": datetime.now().isoformat()
-    }
-    
-
-@app.post("/auth/link")
-async def link_account(code: str):
-    """Заглушка для привязки аккаунта (ожидается вашим Streamlit)"""
-    if code == "123456":  # Тестовый код
-        return {
-            "status": "success",
-            "data": {
-                "user_id": "test_user_123",
-                "telegram_username": "@test_user",
-                "access_token": "test_jwt_token"
-            }
-        }
-    return {"status": "error", "detail": "Неверный код"}
-
-@app.post("/stats")
-async def get_stats(user_id: str, period: str):
-    """Заглушка для статистики (ожидается вашим Streamlit)"""
-    return {
-        "status": "success",
-        "data": {
-            "period": period,
-            "total_plates": 8,
-            "avg_calories": 420,
-            "balance_score": 75,
-            "trend": "stable",
-            "calories_over_time": [
-                {"date": "2024-01-08", "calories": 2100},
-                {"date": "2024-01-09", "calories": 1950}
-            ],
-            "macros_distribution": {"protein": 30, "fat": 25, "carbs": 45},
-            "common_deficiencies": [
-                {"name": "Витамин D", "severity": "medium", "frequency": 6}
-            ]
-        }
-    }
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+        print("❌ Ошибка при обработке запроса:", e)
+        raise HTTPException(status_code=500, detail="Ошибка при обработке запроса")

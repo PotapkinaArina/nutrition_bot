@@ -1,14 +1,19 @@
-FROM python:3.9-slim 
+FROM python:3.9-slim
 
-WORKDIR /app    
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+# Рабочая директория
+WORKDIR /app
 
-COPY requirements.txt .    
+# Копируем только зависимости
+COPY requirements.txt .
+
+# Устанавливаем зависимости
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . . 
+# Копируем весь код из текущей папки (backend) внутрь контейнера
+COPY . .
 
+# Устанавливаем PYTHONPATH
+ENV PYTHONPATH=/app
 
+# Запуск приложения
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
