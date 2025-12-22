@@ -1,4 +1,16 @@
 -- таблица пользователей.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='nutrition_user') THEN
+        CREATE ROLE nutrition_user WITH LOGIN PASSWORD 'OchPlohoyParol';
+    END IF;
+END
+$$;
+
+SELECT 'CREATE DATABASE nutrition_db OWNER nutrition_user'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname='nutrition_db')\gexec
+
+
 CREATE TABLE IF NOT EXISTS users(
     id SERIAL PRIMARY KEY,
     telegram_id BIGINT UNIQUE,
@@ -75,8 +87,8 @@ CREATE TRIGGER update_users_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 
-INSERT INTO users (telegram_id, username,weight,height,age,gender)
-VALUES
-    (123456789, 'test_user', 65.4, 168.9, 25, 'female'),
-    (987654321, 'demo_user', 70.5, 172.0, 20, 'male')
-ON CONFLICT (telegram_id) DO NOTHING;
+--INSERT INTO users (telegram_id, username,weight,height,age,gender)
+--VALUES
+  --  (123456789, 'test_user', 65.4, 168.9, 25, 'female'),
+   -- (987654321, 'demo_user', 70.5, 172.0, 20, 'male')
+--ON CONFLICT (telegram_id) DO NOTHING;

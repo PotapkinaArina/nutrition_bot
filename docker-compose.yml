@@ -1,4 +1,4 @@
-version: '3.8'
+#version: '3.8'
 
 services:       # 1Сервис: База данных Постгрескл с инициализацией.
     postgres:
@@ -18,7 +18,7 @@ services:       # 1Сервис: База данных Постгрескл с �
         networks:   # Контейнер подключаем в сети.
             - app-network  #пока внутренняя сеть.
         healthcheck:    # рабочий контейнер или нет.
-            test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+            test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-nutrition_db}"]
             interval: 10s # чекает каждые 10 сек.
             timeout: 5s
             retries: 5 # если 5 раз плохо - unhealthy.
@@ -30,7 +30,7 @@ services:       # 1Сервис: База данных Постгрескл с �
         container_name: nutrition_backend
         restart: unless-stopped
         ports:
-            - "8000:8000"
+            - "8001:8000"
         environment:
             DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-changeme}@postgres:5432/${DB_NAME:-nutrition_db}
                     # протокол://пользователь:пароль@хост:порт/ьаза.
