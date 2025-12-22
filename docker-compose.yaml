@@ -8,7 +8,7 @@ services:       # 1Сервис: База данных Постгрескл с �
         environment:         # внутри контейнера переменные:
             POSTGRES_USER: ${DB_USER:-postgres}   # из .env файла(тут по умолчанию).
             POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme} 
-            POSTGRES_DB: ${DB_NAME:-nutrition_dn}
+            POSTGRES_DB: ${DB_NAME:-nutrition_db}
         ports:      # ХОСТ: КОНТЕЙНЕР проброс портов.
             - "5433:5432"
         volumes: # монтируем диски-папки.
@@ -53,8 +53,10 @@ services:       # 1Сервис: База данных Постгрескл с �
         ports:
             - "8501:8501"
         environment:
-            BACKEND_URL: http://backend:8000 # имя сервиса(не локалхост)
-                                            #внутри сети контейнеры общаются через имена сервисов.
+            API_URL: http://backend:8000 # имя сервиса(не локалхост)
+            STREAMLIT_SERVER_PORT: 8501
+            STREAMLIT_SERVER_ADDRESS: 0.0.0.0 
+        command: streamlit run src/app.py                                  
         depends_on:
             - backend
         networks:
@@ -69,8 +71,8 @@ services:       # 1Сервис: База данных Постгрескл с �
         container_name: nutrition_telegram_bot
         restart: unless-stopped
         environment:
-            BACKEND_URL: http://backend:8000
-            BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-dummy_token}
+            API_URL: http://backend:8000
+            TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-dummy_token}
         depends_on:
             - backend
         networks: 

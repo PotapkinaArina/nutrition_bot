@@ -186,6 +186,43 @@ async def create_user(user: UserCreate):
         "telegram_id": user.telegram_id,
         "timestamp": datetime.now().isoformat()
     }
+    
+
+@app.post("/auth/link")
+async def link_account(code: str):
+    """Заглушка для привязки аккаунта (ожидается вашим Streamlit)"""
+    if code == "123456":  # Тестовый код
+        return {
+            "status": "success",
+            "data": {
+                "user_id": "test_user_123",
+                "telegram_username": "@test_user",
+                "access_token": "test_jwt_token"
+            }
+        }
+    return {"status": "error", "detail": "Неверный код"}
+
+@app.post("/stats")
+async def get_stats(user_id: str, period: str):
+    """Заглушка для статистики (ожидается вашим Streamlit)"""
+    return {
+        "status": "success",
+        "data": {
+            "period": period,
+            "total_plates": 8,
+            "avg_calories": 420,
+            "balance_score": 75,
+            "trend": "stable",
+            "calories_over_time": [
+                {"date": "2024-01-08", "calories": 2100},
+                {"date": "2024-01-09", "calories": 1950}
+            ],
+            "macros_distribution": {"protein": 30, "fat": 25, "carbs": 45},
+            "common_deficiencies": [
+                {"name": "Витамин D", "severity": "medium", "frequency": 6}
+            ]
+        }
+    }
 
 if __name__ == "__main__":
     import uvicorn
