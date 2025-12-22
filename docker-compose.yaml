@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:       # 1Сервис: База данных Постгрескл с инициализацией.
+    postgres:
+        image: postgres:15-alpine
+        container_name: nutrition_db 
+        restart: unless-stopped # автоперезапуск, если упадёт(кроме ручной остановки).
+        environment:         # внутри контейнера переменные:
+            POSTGRES_USER: ${DB_USER:-postgres}   # из .env файла(тут по умолчанию).
+            POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme} 
+            POSTGRES_DB: ${DB_NAME:-nutrition_db}
+        ports:      # ХОСТ: КОНТЕЙНЕР проброс портов.
+            - "5433:5432"
+        volumes: # монтируем диски-папки.
+            - postgres_data:/var/lib/postgresql/data # для БД волюм.
+            - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql #чтоб сразу инит.скл сделал.
+            # инит.скл в папку датабэйз сразу.
+        networks:   # Контейнер подключаем в сети.
+            - app-network  #пока внутренняя сеть.
+        healthcheck:    # рабочий контейнер или нет.
+            test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+            interval: 10s # чекает каждые 10 сек.
+            timeout: 5s
+            retries: 5 # если 5 раз плохо - unhealthy.
+
+    backend: #2 сервис прога FastAPI.
+        build:      #собираем образ из докерфайла(вместо image)
+            context: ./backend  # папка с докерфайлом.
+            dockerfile: Dockerfile  
+        container_name: nutrition_backend
+        restart: unless-stopped
+        ports:
+            - "8000:8000"
+        environment:
+            DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-changeme}@postgres:5432/${DB_NAME:-nutrition_db}
+                    # протокол://пользователь:пароль@хост:порт/ьаза.
+                    # тут хост постгрес(имя сервиса, а не локалхост).
+        depends_on:     #зависимости.
+            postgres:
+                condition: service_healthy #ждём, когда БД будет healthy.
+        networks:
+            - app-network 
+                #монтировка кода(сразу применяются изменения)
+        volumes:
+            - ./backend:/app    # из ПК сразу в контейнер.
+            
+    frontend:       #3 сервис фронтенд(стримлит).
+        build:
+            context: ./frontend_streamlit
+            dockerfile: Dockerfile
+        container_name: nutrition_frontend
+        restart: unless-stopped
+        ports:
+            - "8501:8501"
+        environment:
+            API_URL: http://backend:8000 # имя сервиса(не локалхост)
+            STREAMLIT_SERVER_PORT: 8501
+            STREAMLIT_SERVER_ADDRESS: 0.0.0.0 
+        command: streamlit run src/app.py                                  
+        depends_on:
+            - backend
+        networks:
+            - app-network
+        volumes:
+            - ./frontend_streamlit:/app
+
+    telegram_bot:   #4 сервис ТГ бот
+        build:
+            context: ./telegram_bot
+            dockerfile: Dockerfile
+        container_name: nutrition_telegram_bot
+        restart: unless-stopped
+        environment:
+            API_URL: http://backend:8000
+            TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-dummy_token}
+        depends_on:
+            - backend
+        networks: 
+            - app-network    
+        volumes:
+            - ./telegram_bot:/app #бот сам подключается к ТГ (не нужны порты) outbound connection.
+                
+networks: 
+    app-network: 
+        driver: bridge # ну стандартный драйвер :/ виртуальная сеть между контейнерами.
+volumes:
+    postgres_data:
+        driver: local   # хранится локально на диске.(если удал. конт. всё равно дата сохранится.
